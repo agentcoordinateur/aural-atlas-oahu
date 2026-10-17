@@ -1,0 +1,42 @@
+{
+  "verdict": "PASS",
+  "algorithm": "advanceAlongPath + traveledRef (current source)",
+  "final_progress_pct": 100,
+  "final_idx": 240,
+  "dist_from_start_m": 5863.4,
+  "stuck_windows": 0,
+  "samples_at": [
+    {
+      "t_s": 0.02,
+      "progress_pct": 0.01,
+      "idx": 0,
+      "lat": 21.353183,
+      "lon": -157.808028,
+      "delta_m": 1.5
+    },
+    {
+      "t_s": 31.53,
+      "progress_pct": 25.24,
+      "idx": 70,
+      "lat": 21.370191,
+      "lon": -157.788054,
+      "delta_m": 1.5
+    },
+    {
+      "t_s": 62.53,
+      "progress_pct": 50.06,
+      "idx": 140,
+      "lat": 21.39348,
+      "lon": -157.79774,
+      "delta_m": 1.5
+    },
+    {
+      "t_s": 124.92,
+      "progress_pct": 100,
+      "idx": 240,
+      "lat": 21.4048,
+      "lon": -157.7965,
+      "delta_m": 1.49
+    }
+  ]
+}
