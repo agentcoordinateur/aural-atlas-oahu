@@ -13,6 +13,13 @@ import {
   getVoiceCount,
   BEEP_EVENT,
   refreshVoices,
+  VOICES_EVENT,
+  getEnglishVoices,
+  getPreferredVoiceURI,
+  setPreferredVoice,
+  getCurrentVoiceName,
+  testVoice,
+  type VoiceOption,
 } from './lib/speech';
 import type { StreamProps, WatershedProps } from './lib/types';
 import './App.css';
@@ -37,6 +44,9 @@ export default function App() {
   const [captionExpanded, setCaptionExpanded] = useState(false);
   const [audioLabel, setAudioLabel] = useState('TTS: …');
   const [audioFlash, setAudioFlash] = useState(false);
+  const [voiceOptions, setVoiceOptions] = useState<VoiceOption[]>([]);
+  const [voicePref, setVoicePref] = useState<string>('');
+  const [voiceName, setVoiceName] = useState<string | null>(null);
 
   const { position, setPosition, simulating, progress, finished, toggle, stop } =
     useSimulateDrive({ speedMps: DEMO_SPEED_MPS * speedMult });
@@ -91,6 +101,32 @@ export default function App() {
       window.clearTimeout(t);
     };
   }, []);
+
+  // Voice picker: refresh when the voice list loads / selection changes
+  useEffect(() => {
+    const sync = () => {
+      setVoiceOptions(getEnglishVoices());
+      setVoicePref(getPreferredVoiceURI() ?? '');
+      setVoiceName(getCurrentVoiceName());
+    };
+    refreshVoices();
+    sync();
+    window.addEventListener(VOICES_EVENT, sync);
+    const t = window.setTimeout(() => {
+      refreshVoices();
+      sync();
+    }, 1000);
+    return () => {
+      window.removeEventListener(VOICES_EVENT, sync);
+      window.clearTimeout(t);
+    };
+  }, []);
+
+  const onVoiceChange = (uri: string) => {
+    setPreferredVoice(uri || null);
+    setVoicePref(uri);
+    setVoiceName(getCurrentVoiceName());
+  };
 
   // Visible AUDIO flash on every beep (remote desktop often drops Chromium audio)
   useEffect(() => {
@@ -231,26 +267,6 @@ export default function App() {
               </span>
             </div>
           )}
-          {(simulating || position.source === 'simulate') && (
-            <div className="debug-hud" role="status" aria-live="off">
-              <div className="debug-hud-row">
-                <span className="debug-hud-k">Progress</span>
-                <span className="debug-hud-v">{pct}%</span>
-              </div>
-              <div className="debug-hud-row">
-                <span className="debug-hud-k">Lat</span>
-                <span className="debug-hud-v mono">{position.lat.toFixed(5)}</span>
-              </div>
-              <div className="debug-hud-row">
-                <span className="debug-hud-k">Lon</span>
-                <span className="debug-hud-v mono">{position.lon.toFixed(5)}</span>
-              </div>
-              <div className="debug-hud-row">
-                <span className="debug-hud-k">Watershed</span>
-                <span className="debug-hud-v">{activeName}</span>
-              </div>
-            </div>
-          )}
           {simulating && (
             <div className="sim-progress" aria-hidden>
               <div className="sim-progress-bar" style={{ width: `${pct}%` }} />
@@ -350,6 +366,39 @@ export default function App() {
             ))}
           </div>
 
+          <section className="voice-row" aria-label="Voice">
+            <label className="voice-label" htmlFor="voice-select">
+              Voice
+            </label>
+            <select
+              id="voice-select"
+              className="voice-select"
+              value={voicePref}
+              onChange={(e) => onVoiceChange(e.target.value)}
+              disabled={voiceOptions.length === 0}
+            >
+              <option value="">
+                {voiceOptions.length === 0
+                  ? 'No voices found (device default)'
+                  : `Auto (best: ${voiceOptions[0].name})`}
+              </option>
+              {voiceOptions.map((v) => (
+                <option key={v.uri} value={v.uri}>
+                  {v.name} · {v.lang}
+                  {v.local ? '' : ' · online'}
+                </option>
+              ))}
+            </select>
+            <button type="button" className="btn ghost voice-test" onClick={testVoice}>
+              Test voice
+            </button>
+            <p className="voice-hint">
+              For the most natural iPhone voice, download an Enhanced/Premium voice in
+              Settings &gt; Accessibility &gt; Spoken Content &gt; Voices.
+              {voiceName ? ` Now using: ${voiceName}.` : ''}
+            </p>
+          </section>
+
           <label className="toggle">
             <input
               type="checkbox"
@@ -365,10 +414,8 @@ export default function App() {
               <p className="empty">
                 Start <strong>Simulate drive</strong> for a Pali→Windward demo
                 (~90–120 s at 1×). Expect Lulumahu then Nuuanu→Kaneohe by ~25%.
-                Captions + a short beep always fire (TTS only when voices exist).
-                Watch for the yellow <strong>AUDIO</strong> flash on each beep
-                (remote desktop often drops Chromium sound). Map does not glue
-                the red marker to center.
+                Captions + a soft chime always fire (TTS only when voices exist).
+                Use the layers button on the map to switch Topo / Relief / Streets.
               </p>
             ) : (
               <ul>

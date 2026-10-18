@@ -165,28 +165,140 @@ export function playTestChirp() {
   }
 }
 
+export const VOICES_EVENT = 'aural-atlas-voices';
+const VOICE_STORAGE_KEY = 'aao.voiceURI';
+
+/** Novelty / effect voices shipped on Apple platforms, plus eSpeak. */
+const NOVELTY_RE =
+  /\b(albert|bad news|bells|boing|bubbles|cellos|fred|junior|ralph|trinoids|whisper|zarvox|wobble|superstar|jester|organ|good news|bahh|hysterical|deranged|pipe organ)\b|espeak/i;
+const QUALITY_RE = /premium|enhanced|neural|natural|siri/i;
+const KNOWN_GOOD_RE = /\b(ava|zoe|samantha|allison|evan|nathan|karen|daniel|moira|aria|jenny|guy|serena|tom|susan|joelle|noelle)\b/i;
+
+export interface VoiceOption {
+  uri: string;
+  name: string;
+  lang: string;
+  local: boolean;
+  score: number;
+}
+
+function isGoogleOrEdgeNatural(v: SpeechSynthesisVoice) {
+  return /^google /i.test(v.name) || /microsoft .*online.*natural/i.test(v.name);
+}
+
+/** Higher is better; negative means "never auto-pick / hide". */
+export function scoreVoice(v: SpeechSynthesisVoice): number {
+  const name = v.name || '';
+  const lang = (v.lang || '').replace('_', '-');
+  if (!/^en/i.test(lang)) return -1;
+  if (NOVELTY_RE.test(name)) return -1;
+  let score = 0;
+  if (QUALITY_RE.test(name)) score += 100;
+  if (/^google us english$/i.test(name)) score += 75;
+  else if (/^google uk english female$/i.test(name)) score += 70;
+  else if (/^google /i.test(name)) score += 40;
+  if (KNOWN_GOOD_RE.test(name)) score += 60;
+  if (isGoogleOrEdgeNatural(v)) {
+    // Network voices are only worth it for the Google / Edge natural sets.
+  } else if (v.localService) {
+    score += 8;
+  } else {
+    score -= 15;
+  }
+  if (/^en-us$/i.test(lang)) score += 10;
+  else if (/^en-(gb|au|ie|ca|nz)$/i.test(lang)) score += 5;
+  const nav = (typeof navigator !== 'undefined' && navigator.language) || '';
+  if (nav && lang.toLowerCase() === nav.toLowerCase()) score += 4;
+  if (v.default) score += 3;
+  // Old SAPI / compact voices sound robotic.
+  if (/\b(david|zira|mark|compact)\b/i.test(name) && !QUALITY_RE.test(name)) score -= 5;
+  return score;
+}
+
+function readSavedVoiceURI(): string | null {
+  try {
+    return window.localStorage.getItem(VOICE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** English voices, best first (novelty / eSpeak voices excluded). */
+export function getEnglishVoices(): VoiceOption[] {
+  return voicesCache
+    .map((v) => ({ v, score: scoreVoice(v) }))
+    .filter((x) => x.score >= 0)
+    .sort((a, b) => b.score - a.score || a.v.name.localeCompare(b.v.name))
+    .map(({ v, score }) => ({
+      uri: v.voiceURI || v.name,
+      name: v.name,
+      lang: v.lang,
+      local: v.localService,
+      score,
+    }));
+}
+
+/** voiceURI saved by the user, or null for automatic (best available). */
+export function getPreferredVoiceURI(): string | null {
+  return readSavedVoiceURI();
+}
+
+export function setPreferredVoice(uri: string | null) {
+  try {
+    if (uri) window.localStorage.setItem(VOICE_STORAGE_KEY, uri);
+    else window.localStorage.removeItem(VOICE_STORAGE_KEY);
+  } catch {
+    // private mode etc.
+  }
+  pickVoice();
+}
+
+export function getCurrentVoiceName(): string | null {
+  return chosenVoice?.name ?? null;
+}
+
 function pickVoice() {
   const s = synth();
   if (!s) return;
+  const prevCount = voicesCache.length;
   try {
     voicesCache = s.getVoices();
   } catch {
     voicesCache = [];
   }
+  const prev = chosenVoice;
   if (voicesCache.length === 0) {
     chosenVoice = null;
-    return;
+  } else {
+    const saved = readSavedVoiceURI();
+    const savedVoice = saved
+      ? voicesCache.find((v) => (v.voiceURI || v.name) === saved)
+      : undefined;
+    if (savedVoice) {
+      chosenVoice = savedVoice;
+    } else {
+      const ranked = getEnglishVoices();
+      const best = ranked[0];
+      // Nothing decent? Leave voice unset so the platform default speaks.
+      chosenVoice = best
+        ? voicesCache.find((v) => (v.voiceURI || v.name) === best.uri) ?? null
+        : null;
+    }
   }
-  const lang = (typeof navigator !== 'undefined' && navigator.language) || 'en-US';
-  const en = voicesCache.filter((v) => v.lang?.toLowerCase().startsWith('en'));
-  chosenVoice =
-    en.find((v) => v.lang === lang && v.localService) ||
-    en.find((v) => v.lang === 'en-US' && v.localService) ||
-    en.find((v) => v.localService) ||
-    en.find((v) => v.default) ||
-    en[0] ||
-    voicesCache.find((v) => v.default) ||
-    null;
+  if (prev !== chosenVoice || prevCount !== voicesCache.length) {
+    try {
+      window.dispatchEvent(new CustomEvent(VOICES_EVENT));
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/** Speak a short sample with the current voice (call from a tap). */
+export function testVoice() {
+  cancelSpeech();
+  unlockSpeech();
+  announce('This is Aural Atlas. Entering Nuuanu watershed, about nine square miles.');
 }
 
 let voicesListenerInstalled = false;
@@ -214,7 +326,7 @@ export function unlockSpeech() {
       // Short silent utterance primes iOS / Chrome while inside the gesture.
       const u = new SpeechSynthesisUtterance(' ');
       u.volume = 0;
-      u.rate = 2;
+      u.rate = 1;
       liveUtterances.add(u);
       const drop = () => liveUtterances.delete(u);
       u.onend = drop;
@@ -365,7 +477,7 @@ function speakNext() {
   }
   item.attempts += 1;
   const u = new SpeechSynthesisUtterance(item.text);
-  u.rate = 1.0;
+  u.rate = 0.95;
   u.pitch = 1;
   u.volume = 1;
   if (chosenVoice) {

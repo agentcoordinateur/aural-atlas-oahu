@@ -6,7 +6,9 @@ import {
   CircleMarker,
   Polyline,
   Pane,
+  LayersControl,
   useMap,
+  useMapEvents,
 } from 'react-leaflet';
 import type { FeatureCollection, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
 import L from 'leaflet';
@@ -22,6 +24,67 @@ const EDGE_BUFFER = 0.18;
  *  changes, which re-appends it to the overlay SVG on top of anything else
  *  in that pane — hence the old marker ending up underneath. */
 const ROUTE_PANE = 'aaoRoute';
+
+/** Free, no-key basemaps. */
+const BASE_STORAGE_KEY = 'aao.basemap';
+const USGS_ATTR =
+  '<a href="https://www.usgs.gov/programs/national-geospatial-program/national-map">USGS The National Map</a>';
+const BASEMAPS = {
+  topo: {
+    name: 'Topo (USGS)',
+    url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',
+    attribution: USGS_ATTR,
+    maxNativeZoom: 16,
+  },
+  opentopo: {
+    name: 'OpenTopoMap',
+    url: 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+    attribution:
+      'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Style &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)',
+    maxNativeZoom: 17,
+  },
+  relief: {
+    name: 'Shaded relief (USGS)',
+    url: 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSShadedReliefOnly/MapServer/tile/{z}/{y}/{x}',
+    attribution: USGS_ATTR + ' 3DEP',
+    maxNativeZoom: 16,
+  },
+  osm: {
+    name: 'Streets (OSM)',
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxNativeZoom: 19,
+  },
+} as const;
+type BaseKey = keyof typeof BASEMAPS;
+
+function readSavedBase(): BaseKey {
+  try {
+    const v = window.localStorage.getItem(BASE_STORAGE_KEY);
+    if (v && v in BASEMAPS) return v as BaseKey;
+  } catch {
+    // ignore
+  }
+  return 'topo';
+}
+
+/** Remember the user's basemap choice. */
+function RememberBasemap() {
+  useMapEvents({
+    baselayerchange(e) {
+      const key = (Object.keys(BASEMAPS) as BaseKey[]).find(
+        (k) => BASEMAPS[k].name === e.name,
+      );
+      if (!key) return;
+      try {
+        window.localStorage.setItem(BASE_STORAGE_KEY, key);
+      } catch {
+        // ignore
+      }
+    },
+  });
+  return null;
+}
 const USER_PANE = 'aaoUser';
 
 interface Props {
@@ -206,6 +269,7 @@ export function AtlasMap({
   const moving = position.source === 'simulate' || simulating;
 
   const [trail, setTrail] = useState<[number, number][]>([]);
+  const [initialBase] = useState<BaseKey>(() => readSavedBase());
 
   useLayoutEffect(() => {
     if (position.source === 'idle') {
@@ -241,20 +305,21 @@ export function AtlasMap({
       const id = (feature?.properties as WatershedProps | undefined)?.id;
       const active = id != null && id === activeId;
       return {
-        color: active ? '#f5d76e' : '#2a6f5f',
+        // Tuned for light topo / relief basemaps: crisp outlines, light fills
+        color: active ? '#f9a825' : '#00695c',
         weight: active ? 3 : 1,
-        opacity: active ? 1 : 0.45,
-        fillColor: active ? '#f5d76e' : '#1a4d40',
-        fillOpacity: active ? 0.45 : 0.12,
+        opacity: active ? 1 : 0.6,
+        fillColor: active ? '#ffd54f' : '#00695c',
+        fillOpacity: active ? 0.28 : 0.05,
       };
     };
   }, [activeId]);
 
   const streamStyle = useMemo(
     () => ({
-      color: '#4fc3f7',
-      weight: 2,
-      opacity: 0.85,
+      color: '#1565c0',
+      weight: 1.8,
+      opacity: 0.8,
     }),
     [],
   );
@@ -274,10 +339,28 @@ export function AtlasMap({
       zoomControl={false}
       attributionControl={true}
     >
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
+      <LayersControl position="topright" collapsed>
+        {(Object.keys(BASEMAPS) as BaseKey[]).map((k) => (
+          <LayersControl.BaseLayer key={k} name={BASEMAPS[k].name} checked={k === initialBase}>
+            <TileLayer
+              url={BASEMAPS[k].url}
+              attribution={BASEMAPS[k].attribution}
+              maxNativeZoom={BASEMAPS[k].maxNativeZoom}
+              maxZoom={19}
+            />
+          </LayersControl.BaseLayer>
+        ))}
+        <LayersControl.Overlay name="Streets overlay (OSM, faint)">
+          <TileLayer
+            url={BASEMAPS.osm.url}
+            attribution={BASEMAPS.osm.attribution}
+            opacity={0.4}
+            maxNativeZoom={19}
+            maxZoom={19}
+          />
+        </LayersControl.Overlay>
+      </LayersControl>
+      <RememberBasemap />
       {watersheds && (
         <GeoJSON
           key={`ws-${activeId ?? 'none'}-${watersheds.features.length}`}

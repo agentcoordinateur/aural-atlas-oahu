@@ -392,7 +392,7 @@ li[data-kind='stream-approach'] .kind {
   position: absolute;
   left: 0.75rem;
   right: 0.75rem;
-  bottom: 0.75rem;
+  bottom: 1.5rem;
   z-index: 500;
   height: 1.6rem;
   border-radius: 999px;
@@ -535,51 +535,6 @@ li[data-kind='stream-approach'] .kind {
   font-size: 1rem;
 }
 
-/* —— Live debug HUD (simulate) —— */
-
-.debug-hud {
-  position: absolute;
-  left: 0.5rem;
-  bottom: 2.6rem;
-  z-index: 650;
-  min-width: 11.5rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 10px;
-  background: rgba(6, 28, 22, 0.92);
-  border: 2px solid #ffb74d;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
-  pointer-events: none;
-  font-size: 0.8rem;
-  line-height: 1.35;
-}
-
-.debug-hud-row {
-  display: grid;
-  grid-template-columns: 5.2rem 1fr;
-  gap: 0.35rem;
-  align-items: baseline;
-}
-
-.debug-hud-k {
-  color: #9ecbbd;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 0.65rem;
-}
-
-.debug-hud-v {
-  color: #fff;
-  font-weight: 800;
-}
-
-.debug-hud-v.mono {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9rem;
-  color: #ffb74d;
-  letter-spacing: 0.02em;
-}
-
 .hud-coords {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 0.9rem !important;
@@ -621,7 +576,7 @@ li[data-kind='stream-approach'] .kind {
 
 .audio-flash {
   position: absolute;
-  bottom: 2.7rem;
+  bottom: 3.4rem;
   right: calc(0.5rem + env(safe-area-inset-right, 0px));
   z-index: 710;
   pointer-events: none;
@@ -639,4 +594,68 @@ li[data-kind='stream-approach'] .kind {
   0% { opacity: 0; transform: scale(0.8); }
   30% { opacity: 1; transform: scale(1); }
   100% { opacity: 0.85; }
+}
+
+/* —— voice picker —— */
+.voice-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.voice-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #9ecbbd;
+}
+
+.voice-select {
+  min-width: 0;
+  width: 100%;
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #1e5c4a;
+  background: #0f3228;
+  color: #e8f5f1;
+}
+
+.voice-test {
+  white-space: nowrap;
+  font-size: 0.85rem;
+  padding: 0.45rem 0.7rem;
+  min-height: 2.4rem;
+}
+
+.voice-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: #8fb8ab;
+}
+
+/* —— Leaflet layer control (compact, dark theme) —— */
+.atlas-map .leaflet-control-layers {
+  background: rgba(6, 28, 22, 0.88);
+  color: #e8f5f1;
+  border: 1px solid #2a6f5f;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+.atlas-map .leaflet-control-layers-expanded {
+  padding: 0.4rem 0.6rem;
+}
+.atlas-map .leaflet-control-layers-separator {
+  border-top-color: #2a6f5f;
+}
+.atlas-map .leaflet-control-container .leaflet-top {
+  top: 3.6rem;
+}
+
+.atlas-map .leaflet-control-attribution {
+  font-size: 9px;
+  line-height: 1.3;
 }
