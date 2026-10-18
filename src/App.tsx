@@ -281,11 +281,6 @@ export default function App() {
             <h2>Active watershed</h2>
             <p className="big">{activeName}</p>
             {blurbs && area && <p className="meta">{area}</p>}
-            {(simulating || position.source === 'simulate') && (
-              <p className="meta hud-coords" style={{ fontFamily: 'ui-monospace, monospace', fontSize: '0.85rem' }}>
-                {position.lat.toFixed(5)}, {position.lon.toFixed(5)}
-              </p>
-            )}
             {lastStreamNear && (
               <p className="meta stream">Near: {lastStreamNear}</p>
             )}

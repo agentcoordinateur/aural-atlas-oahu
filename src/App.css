@@ -535,13 +535,6 @@ li[data-kind='stream-approach'] .kind {
   font-size: 1rem;
 }
 
-.hud-coords {
-  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9rem !important;
-  color: #ffb74d !important;
-  font-weight: 700;
-}
-
 
 /* —— audio status + flash —— */
 .chip-row {
