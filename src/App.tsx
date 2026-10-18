@@ -33,7 +33,8 @@ export default function App() {
   const [blurbs, setBlurbs] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [speedMult, setSpeedMult] = useState<SpeedMult>(1);
-  const [caption, setCaption] = useState<string | null>(null);
+  const [caption, setCaption] = useState<{ id: string; title: string; detail?: string } | null>(null);
+  const [captionExpanded, setCaptionExpanded] = useState(false);
   const [audioLabel, setAudioLabel] = useState('TTS: …');
   const [audioFlash, setAudioFlash] = useState(false);
 
@@ -101,17 +102,20 @@ export default function App() {
     return () => window.removeEventListener(BEEP_EVENT, onBeep);
   }, []);
 
-  // Always show large on-screen captions for announcements (silent demos / no TTS voices)
+  // Compact on-screen caption for each announcement (works with or without TTS)
   useEffect(() => {
     if (events.length === 0) return;
     const latest = events[0];
-    const text = latest.detail
-      ? `${latest.title} · ${latest.detail}`
-      : latest.title;
-    setCaption(text);
-    const t = window.setTimeout(() => setCaption(null), 6000);
-    return () => window.clearTimeout(t);
+    setCaption({ id: latest.id, title: latest.title, detail: latest.detail });
+    setCaptionExpanded(false);
   }, [events]);
+
+  // Auto-dismiss: ~4.5 s collapsed, ~9 s if the user tapped to expand
+  useEffect(() => {
+    if (!caption) return;
+    const t = window.setTimeout(() => setCaption(null), captionExpanded ? 9000 : 4500);
+    return () => window.clearTimeout(t);
+  }, [caption, captionExpanded]);
 
   const onMute = () => {
     const next = !isMuted();
@@ -208,9 +212,23 @@ export default function App() {
             </div>
           )}
           {caption && (
-            <div className="announce-banner" role="status" aria-live="polite">
-              <span className="announce-label">Now announcing</span>
-              <span className="announce-text">{caption}</span>
+            <div
+              key={caption.id}
+              className={`announce-banner ${captionExpanded ? 'expanded' : ''}`}
+              role="status"
+              aria-live="polite"
+              onClick={() => setCaptionExpanded((v) => !v)}
+              title={caption.detail ? `${caption.title} · ${caption.detail}` : caption.title}
+            >
+              <span className="announce-dot" aria-hidden>
+                ♪
+              </span>
+              <span className="announce-body">
+                <span className="announce-text">{caption.title}</span>
+                {caption.detail && (
+                  <span className="announce-detail">{caption.detail}</span>
+                )}
+              </span>
             </div>
           )}
           {(simulating || position.source === 'simulate') && (
@@ -371,7 +389,7 @@ export default function App() {
             Data: HI Statewide GIS CWRM watersheds + NHD named flowlines (Oʻahu
             clip). Basemap © OpenStreetMap. Demo route is canned (starts near
             Pali crest) — no invented discharge/rainfall. Mute silences TTS +
-            beep; large captions always show (~6 s). AUDIO flash confirms beeps
+            chime; a compact caption always shows (~4.5 s, tap to expand). AUDIO tag confirms chimes
             even when speakers / remote-desktop audio are silent.
           </p>
         </aside>

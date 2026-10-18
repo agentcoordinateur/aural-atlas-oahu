@@ -5,6 +5,7 @@ import {
   GeoJSON,
   CircleMarker,
   Polyline,
+  Pane,
   useMap,
 } from 'react-leaflet';
 import type { FeatureCollection, Polygon, MultiPolygon, LineString, MultiLineString } from 'geojson';
@@ -15,6 +16,13 @@ import 'leaflet/dist/leaflet.css';
 
 /** Soft-pan only when marker enters this fraction of the view from each edge. */
 const EDGE_BUFFER = 0.18;
+
+/** Dedicated panes so the user marker always renders above watersheds/streams
+ *  (overlayPane = 400). Watershed GeoJSON remounts when the active basin
+ *  changes, which re-appends it to the overlay SVG on top of anything else
+ *  in that pane — hence the old marker ending up underneath. */
+const ROUTE_PANE = 'aaoRoute';
+const USER_PANE = 'aaoUser';
 
 interface Props {
   watersheds: FeatureCollection<Polygon | MultiPolygon, WatershedProps> | null;
@@ -147,9 +155,10 @@ function ImperativeUserMarker({
     <>
       {moving && (
         <CircleMarker
+          pane={USER_PANE}
           ref={pulseRef}
           center={[position.lat, position.lon]}
-          radius={22}
+          radius={13}
           pathOptions={{
             color: '#e53935',
             weight: 2,
@@ -160,24 +169,26 @@ function ImperativeUserMarker({
           }}
         />
       )}
-      <CircleMarker
-        ref={markerRef}
-        center={[position.lat, position.lon]}
-        radius={moving ? 14 : 9}
-        pathOptions={{
-          color: '#fff',
-          weight: 3,
-          fillColor: '#e53935',
-          fillOpacity: 1,
-        }}
-      />
       <Polyline
         ref={headingRef}
+        pane={USER_PANE}
         positions={[
           [position.lat, position.lon],
           headingTip,
         ]}
-        pathOptions={{ color: '#e53935', weight: 3, opacity: 0.9 }}
+        pathOptions={{ color: '#e53935', weight: 2, opacity: 0.9 }}
+      />
+      <CircleMarker
+        ref={markerRef}
+        pane={USER_PANE}
+        center={[position.lat, position.lon]}
+        radius={moving ? 8.5 : 5.5}
+        pathOptions={{
+          color: '#fff',
+          weight: 2,
+          fillColor: '#e53935',
+          fillOpacity: 1,
+        }}
       />
     </>
   );
@@ -288,8 +299,10 @@ export function AtlasMap({
           }}
         />
       )}
+      <Pane name={ROUTE_PANE} style={{ zIndex: 450 }}>
       {routeCoords && (
         <Polyline
+          pane={ROUTE_PANE}
           positions={routeCoords}
           pathOptions={{ color: '#ff8a65', weight: 3, opacity: 0.7, dashArray: '6 8' }}
         />
@@ -297,6 +310,7 @@ export function AtlasMap({
       {/* Growing trail — motion obvious while basemap stays put */}
       {trail.length >= 2 && (
         <Polyline
+          pane={ROUTE_PANE}
           positions={trail}
           pathOptions={{
             color: '#e53935',
@@ -307,7 +321,10 @@ export function AtlasMap({
           }}
         />
       )}
-      <ImperativeUserMarker position={position} moving={moving} />
+      </Pane>
+      <Pane name={USER_PANE} style={{ zIndex: 660 }}>
+        <ImperativeUserMarker position={position} moving={moving} />
+      </Pane>
       <FitRouteOnSimulate routeCoords={routeCoords} simulating={simulating} />
       <FollowUser position={position} simulating={simulating} />
     </MapContainer>

@@ -13,6 +13,9 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.75rem 1rem;
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+  padding-left: calc(1rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(1rem + env(safe-area-inset-right, 0px));
   background: linear-gradient(180deg, #0b3d2e 0%, #0a2f24 100%);
   border-bottom: 1px solid #1e5c4a;
   flex-shrink: 0;
@@ -294,28 +297,37 @@ li[data-kind='stream-approach'] .kind {
 
 .announce-banner {
   position: absolute;
-  left: 0.5rem;
-  right: 0.5rem;
-  top: 0.5rem;
-  z-index: 600;
+  top: 0.4rem;
+  left: calc(0.4rem + env(safe-area-inset-left, 0px));
+  right: calc(0.4rem + env(safe-area-inset-right, 0px));
+  margin: 0 auto;
+  max-width: 34rem;
+  max-height: 25vh;
+  z-index: 700;
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 1.1rem 1.15rem 1.2rem;
-  border-radius: 14px;
-  background: rgba(6, 28, 22, 0.96);
-  border: 3px solid #3ecf9a;
-  box-shadow:
-    0 0 0 3px rgba(62, 207, 154, 0.35),
-    0 12px 32px rgba(0, 0, 0, 0.55);
-  pointer-events: none;
-  animation: caption-pop 0.35s ease-out;
+  align-items: flex-start;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(6, 28, 22, 0.78);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(62, 207, 154, 0.55);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  overflow: hidden;
+  animation: caption-pop 0.25s ease-out, caption-fade 0.4s ease-in 4.1s forwards;
+}
+
+.announce-banner.expanded {
+  animation: caption-pop 0.25s ease-out;
+  overflow-y: auto;
 }
 
 @keyframes caption-pop {
   from {
-    transform: translateY(-8px);
-    opacity: 0.4;
+    transform: translateY(-6px);
+    opacity: 0;
   }
   to {
     transform: translateY(0);
@@ -323,20 +335,57 @@ li[data-kind='stream-approach'] .kind {
   }
 }
 
-.announce-label {
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #7dd3c0;
+@keyframes caption-fade {
+  to {
+    opacity: 0;
+  }
+}
+
+.announce-dot {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  line-height: 1.25rem;
+  color: #3ecf9a;
+}
+
+.announce-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .announce-text {
-  font-size: clamp(1.45rem, 3.6vw, 2rem);
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.25rem;
   color: #fff;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.announce-detail {
+  font-size: 0.75rem;
+  line-height: 1.05rem;
+  color: #a8dccb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.announce-banner.expanded .announce-text,
+.announce-banner.expanded .announce-detail {
+  white-space: normal;
+}
+
+@media (min-width: 900px) {
+  .announce-text {
+    font-size: 1.1rem;
+    line-height: 1.45rem;
+  }
+  .announce-detail {
+    font-size: 0.85rem;
+  }
 }
 
 .sim-progress {
@@ -572,25 +621,22 @@ li[data-kind='stream-approach'] .kind {
 
 .audio-flash {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 900;
+  bottom: 2.7rem;
+  right: calc(0.5rem + env(safe-area-inset-right, 0px));
+  z-index: 710;
   pointer-events: none;
-  font-size: clamp(2rem, 8vw, 3.5rem);
-  font-weight: 900;
-  letter-spacing: 0.12em;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
   color: #0a1a10;
-  background: #ffe566;
-  border: 4px solid #ffb000;
-  border-radius: 14px;
-  padding: 0.55rem 1.1rem;
-  box-shadow: 0 0 0 6px rgba(255, 214, 70, 0.35), 0 12px 40px rgba(0, 0, 0, 0.45);
+  background: rgba(255, 229, 102, 0.85);
+  border-radius: 999px;
+  padding: 0.12rem 0.4rem;
   animation: audio-flash-pop 0.45s ease-out;
 }
 
 @keyframes audio-flash-pop {
-  0% { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
-  25% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.92; }
+  0% { opacity: 0; transform: scale(0.8); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.85; }
 }
